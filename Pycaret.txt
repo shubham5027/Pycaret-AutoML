@@ -1,0 +1,120 @@
+from pycaret.classification import *
+from pycaret.regression import *
+
+#Septuping the model
+
+model= setup(data=df, target = 'HeartDisease', 
+               categorical_features = ['Sex','ChestPainType',ST_Slope'], 
+               ignore_features ="None",
+               fix_imbalance = 'True',
+               remove_outliers ='True',
+               normalize ='True', 
+               transformation ='True',
+               transform_target ='False',
+               polynomial_features = 'True', 
+               rare_to_value='None', 
+               feature_selection ='True',
+               remove_multicollinearity ='True', 
+               multicollinearity_threshold = 0.3, 
+               pca = 'True', 
+               pca_components =10,
+               low_variance_threshold = 0.1,
+               log_experiment="mlflow",
+               experiment_name = 'Heart_Disease',
+               log_plots='False',
+               log_profile='False',
+               log_data='False',
+               train_size=0.7)
+
+
+import xgboost
+
+#Training The Model
+
+# best = compare_models()
+best = compare_models(sort = 'Accuracy')
+# best = compare_models(probability_threshold = 0.5) #classification only
+# best = compare_models(cross_validation='True')  #C & R
+# best = compare_models(parallel = FugueBackend(spark))
+# best = compare_models(n_select = 10) //top 10 models
+print(best)
+
+#number of models in pycaret
+model()
+
+
+#Training Specific Model
+
+cat = create_model('catboost')
+# lr = create_model('lr',cross_validation='True')
+# dt = create_model('dt', max_depth = 5)                    //params
+# lr = create_model('lr', return_train_score = True)
+# lr = create_model('lr', probability_threshold = 0.25)      //classification
+
+
+#Custom Parameters
+
+# #custom paerameters
+# tuned_dt = tune_model(dt)
+# tuned_dt = tune_model(lr, n_iter = 50)
+# tuned_dt = tune_model(lr, optimize = 'Accuracy',n_iter=25)
+# tuned_dt = tune_model(dt,choose_better = 'False')
+#print(tuned_dt)
+
+
+#Tununing using Libreries
+
+
+# tune_model(lr, search_library = 'optuna')
+# tune_model(cat, search_library = 'scikit-optimize')
+# tune_model(lr, search_library = 'tune-sklearn',search_algorithm = 'hyperopt')  
+
+
+#Ensemble Model
+
+# ensemble model
+# boosted_dt = ensemble_model(dt, method = 'Boosting')
+# boosted_dt = ensemble_model(dt, method = 'Bagging')
+# stacker = stack_models([lr, dt, knn])
+# blender = blend_models([lr, dt, knn])
+
+#Ploting Model
+
+plot_model(cat_tune, plot = 'auc', scale =1)
+plot_model(cat_tune, plot = 'confusion_matrix', plot_kwargs = {'percent' : True})
+
+#Interpreting Model
+
+
+interpret_model(tuned_dt)
+interpret_model(xgboost, plot = 'pdp')
+interpret_model(cat_tune, plot = 'correlation', feature = ['MaxHR','Age'])
+interpret_model(cat_tune, plot = 'msa')
+interpret_model(cat_tune, plot = 'pfi')
+interpret_model(tuned_dt, plot = 'reason')
+
+
+import shap
+shap.initjs()
+interpret_model(cat_tune, plot = 'reason', observation = 1)
+
+
+#Evaluate Model
+
+evaluate_model(cat_tune)
+
+
+#Dashboard
+dashboard(cat_tune)
+
+
+final_lr = finalize_model(catboost)
+
+
+#AWS S3 Deployment
+deploy_model(cat_tune, model_name = 'lr_aws', platform = 'aws', authentication = { 'bucket'  : 'pycaret-test' })
+
+
+#Fast-API
+create_api(cat,'cat_api')
+!python cat_api.py
